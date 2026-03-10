@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Health Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f7f9fc;--border:#e2e8f0;
+  --text:#0f1923;--text2:#4a5568;--muted:#8fa3b8;
+  --green:#00a878;--green-light:#e6f7f3;
+  --red:#e53e3e;--red-light:#fff5f5;
+  --yellow:#d69e2e;--yellow-light:#fffff0;
+  --blue:#3182ce;--blue-light:#ebf8ff;
+  --purple:#6b46c1;
+  --shadow:0 2px 12px rgba(15,25,35,.07);--shadow-lg:0 8px 32px rgba(15,25,35,.12);
+  --radius:14px;
+}
+/* === LAYOUT FIX === */
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Geist',sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* Hide nav until profile saved */
+nav{background:var(--surface);border-bottom:1px solid var(--border);height:60px;display:none;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:200;box-shadow:var(--shadow)}
+nav.visible{display:flex}
+
+/* Profile setup - full screen, always first */
+#profileSetup{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:40px 20px}
+#profileSetup.hidden{display:none!important}
+.setup-card{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:520px;box-shadow:var(--shadow-lg)}
+
+/* App shell - hidden until profile saved */
+#appShell{display:none}
+#appShell.visible{display:block}
+
+/* Pages - only one visible at a time */
+.page{display:none;padding:28px 32px;max-width:1200px;margin:0 auto;animation:fadeUp .22s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.logo{display:flex;align-items:center;gap:10px;cursor:pointer}
+.logo-text{font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--text)}
+.logo-text span{color:var(--green)}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:6px 14px;border-radius:7px;font-size:0.82rem;font-weight:500;color:var(--text2);cursor:pointer;border:none;background:none;font-family:'Geist',sans-serif;transition:all .15s;display:flex;align-items:center;gap:5px}
+.nav-tab:hover{background:var(--bg);color:var(--text)}
+.nav-tab.active{background:var(--green-light);color:var(--green);font-weight:600}
+.nav-right{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0077b6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.75rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.card-title{font-family:'Instrument Serif',serif;font-size:1.05rem;margin-bottom:3px}
+.card-sub{font-size:.75rem;color:var(--muted);margin-bottom:14px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:500;cursor:pointer;border:none;font-family:'Geist',sans-serif;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:#009068}
+.btn-outline{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--text2)}
+.btn-sm{padding:5px 12px;font-size:.77rem}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #fed7d7}
+
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.form-input,.form-select,.form-textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;font-family:'Geist',sans-serif;background:var(--surface2);color:var(--text);transition:border-color .15s;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--green);background:#fff}
+.form-textarea{min-height:80px;resize:vertical}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(15,25,35,.45);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-title{font-family:'Instrument Serif',serif;font-size:1.1rem}
+.modal-close{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+.modal-close:hover{background:var(--bg)}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+.stat-val{font-family:'Instrument Serif',serif;font-size:2rem;line-height:1}
+.stat-label{font-size:.7rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+
+/* Tree */
+.tree-generation{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:6px 0}
+.gen-label{font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;text-align:center;margin-bottom:6px}
+.member-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;min-width:130px;position:relative;cursor:pointer;transition:all .18s;box-shadow:var(--shadow)}
+.member-card:hover{border-color:var(--green);box-shadow:0 0 0 3px var(--green-light)}
+.member-card.is-you{border-color:var(--green);background:var(--green-light)}
+.member-card.deceased{opacity:.55;border-style:dashed}
+.member-name{font-weight:600;font-size:.82rem;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.member-rel{font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.cdots{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}
+.cdot{width:8px;height:8px;border-radius:50%}
+.member-del{position:absolute;top:5px;right:5px;display:none;background:var(--red-light);border:none;border-radius:4px;width:20px;height:20px;cursor:pointer;color:var(--red);align-items:center;justify-content:center;font-size:.75rem}
+.member-card:hover .member-del{display:flex}
+.add-btn{background:var(--surface2);border:1.5px dashed var(--border);border-radius:10px;padding:12px;min-width:100px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:var(--muted);font-size:.76rem;font-family:'Geist',sans-serif;transition:all .15s}
+.add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}
+
+/* Condition autocomplete */
+.cond-wrap{position:relative}
+.cond-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.ctag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:600}
+.ctag button{background:none;border:none;cursor:pointer;opacity:.6;font-size:.75rem;padding:0;line-height:1}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);z-index:300;max-height:200px;overflow-y:auto;margin-top:3px}
+.ac-item{padding:8px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:.82rem}
+.ac-item:hover{background:var(--bg)}
+.sev-badge{font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.03em}
+
+/* Upload */
+.dropzone{border:2px dashed var(--border);border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:all .18s;background:var(--surface2)}
+.dropzone:hover,.dropzone.drag{border-color:var(--green);background:var(--green-light)}
+
+/* Analysis result */
+.analysis-result{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-lg);margin-top:14px}
+.traffic-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tl-normal{background:var(--green-light);color:var(--green)}
+.tl-borderline{background:var(--yellow-light);color:var(--yellow)}
+.tl-concerning{background:var(--red-light);color:var(--red)}
+.vals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.val-chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.val-name{font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px}
+.val-value{font-size:1.05rem;font-weight:700;font-family:'Instrument Serif',serif}
+.val-status{font-size:.65rem;font-weight:700;margin-top:2px}
+
+/* Records */
+.rec-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.rec-item:hover{border-color:var(--green)}
+.rec-item.open{border-color:var(--green);box-shadow:0 0 0 2px var(--green-light)}
+.rec-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rec-expand{display:none;margin-top:11px;padding-top:11px;border-top:1px solid var(--border)}
+.rec-item.open .rec-expand{display:block}
+
+/* Risk report */
+.risk-hero{background:linear-gradient(135deg,#f0fdf8,#e8f4fd);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:24px;margin-bottom:18px;flex-wrap:wrap}
+.score-ring{position:relative;width:110px;height:110px;flex-shrink:0}
+.score-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-family:'Instrument Serif',serif;font-size:2rem;line-height:1}
+.score-lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+.risk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.risk-row:last-child{border-bottom:none}
+.risk-bar-bg{background:var(--border);border-radius:4px;height:5px;width:80px;margin-top:3px}
+.risk-bar{height:5px;border-radius:4px;transition:width .8s ease}
+
+/* Compare */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cmp-header{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.cmp-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.cmp-row:last-child{border-bottom:none}
+.delta-up{color:var(--red);font-size:.7rem;font-weight:700}
+.delta-dn{color:var(--green);font-size:.7rem;font-weight:700}
+
+/* Trend */
+.trend-item{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.trend-item:last-child{border-bottom:none;margin-bottom:0}
+
+/* Processing overlay */
+.proc-overlay{position:fixed;inset:0;background:rgba(15,25,35,.5);backdrop-filter:blur(6px);z-index:600;display:none;align-items:center;justify-content:center}
+.proc-overlay.show{display:flex}
+.proc-box{background:var(--surface);border-radius:var(--radius);padding:32px 40px;text-align:center;box-shadow:var(--shadow-lg);min-width:300px}
+.proc-pulse{font-size:2.4rem;animation:pulse 1.2s ease-in-out infinite;margin-bottom:10px}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.proc-step{font-size:.78rem;color:var(--muted);padding:4px 0;display:flex;align-items:center;gap:6px;transition:color .3s}
+.proc-step.done{color:var(--green)}
+.proc-step.active{color:var(--text);font-weight:500}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:#1a2535;color:#fff;padding:10px 20px;border-radius:8px;font-size:.81rem;font-weight:500;opacity:0;transition:all .28s;z-index:9999;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow-lg)}
+
+.empty-state{text-align:center;padding:48px 20px}
+.empty-state .ei{font-size:2.4rem;margin-bottom:10px}
+.empty-state h3{font-family:'Instrument Serif',serif;font-size:1.1rem;margin-bottom:6px}
+.empty-state p{font-size:.82rem;color:var(--muted);margin-bottom:16px}
+
+@media print{
+  nav,.btn,.dropzone,.modal-overlay,#toast,.proc-overlay,.add-btn{display:none!important}
+  .page{display:block!important;padding:0!important}
+  #page-report{display:block!important}
+  #page-dashboard,#page-family,#page-records{display:none!important}
+  .card{box-shadow:none!important;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<!-- PROFILE SETUP — shown full screen first -->
+<div id="profileSetup">
+  <div class="setup-card">
+    <div style="text-align:center;margin-bottom:24px">
+      <svg width="52" height="52" viewBox="0 0 34 34" fill="none">
+        <rect width="34" height="34" rx="9" fill="#00a878"/>
+        <g transform="translate(4,8)">
+          <circle cx="5" cy="4" r="2.5" fill="white" opacity=".85"/>
+          <circle cx="13" cy="2" r="2.5" fill="white" opacity=".85"/>
+          <circle cx="21" cy="4" r="2.5" fill="white" opacity=".85"/>
+          <path d="M2 10 Q5 7 8 10 Q11 13 13 10 Q15 7 18 10 Q21 13 24 10" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <div style="font-family:'Instrument Serif',serif;font-size:1.6rem;margin-top:12px">Welcome to Family Health Vault</div>
+      <div style="font-size:.83rem;color:var(--muted);margin-top:5px">Your hereditary health intelligence platform</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Your Full Name *</label><input class="form-input" id="pName" placeholder="e.g. Arjun Sharma"/></div>
+      <div class="form-group"><label class="form-label">Age *</label><input class="form-input" id="pAge" type="number" placeholder="e.g. 32"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Gender</label><select class="form-select" id="pGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      <div class="form-group"><label class="form-label">Blood Group</label><select class="form-select" id="pBlood"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Your Known Conditions (type to search)</label>
+      <div class="cond-wrap">
+        <input class="form-input" id="pCondInput" placeholder="e.g. Diabetes, Hypertension..." autocomplete="off" oninput="acSearch(this,'pCondTags','pCondAC')" onkeydown="acKeydown(event,'pCondTags','pCondAC')"/>
+        <div class="ac-list" id="pCondAC" style="display:none"></div>
+      </div>
+      <div class="cond-tags" id="pCondTags"></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="saveProfile()">Get Started →</button>
+  </div>
+</div>
+
+<!-- APP SHELL — hidden until profile saved -->
+<div id="appShell">
+
+<nav class="visible">
+  <div class="logo" onclick="showPage('dashboard',document.querySelector('.nav-tab'))">
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+      <rect width="34" height="34" rx="9" fill="#00a878"/>
+      <g transform="translate(4,8)">
+        <circle cx="5" cy="4" r="2.5" fill="white" opacity=".85"/>
+        <circle cx="13" cy="2" r="2.5" fill="white" opacity=".85"/>
+        <circle cx="21" cy="4" r="2.5" fill="white" opacity=".85"/>
+        <path d="M2 10 Q5 7 8 10 Q11 13 13 10 Q15 7 18 10 Q21 13 24 10" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <div class="logo-text">Family <span>Health</span> Vault</div>
+  </div>
+  <div class="nav-tabs" id="navTabs">
+    <button class="nav-tab" onclick="showPage('dashboard',this)">⬛ Dashboard</button>
+    <button class="nav-tab" onclick="showPage('family',this)">🌳 Family Tree</button>
+    <button class="nav-tab" onclick="showPage('records',this)">📋 Records</button>
+    <button class="nav-tab" onclick="showPage('report',this)">📊 Risk Report</button>
+    <button class="nav-tab" onclick="showPage('chat',this)">💬 AI Doctor</button>
+    <button class="nav-tab" onclick="showPage('meds',this)">💊 Medicines</button>
+    <button class="nav-tab" onclick="showPage('reminders',this)">🔔 Reminders</button>
+  </div>
+  <div class="nav-right" id="navRight">
+    <button class="btn btn-outline btn-sm" onclick="openShareModal()">🔗 Share</button>
+    <button class="btn btn-outline btn-sm" onclick="exportPDFReport()">📄 Export PDF</button>
+    <div class="avatar" id="navAvatar"></div>
+  </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <div style="font-family:'Instrument Serif',serif;font-size:1.5rem" id="dashGreeting">Good morning</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:2px" id="dashDate"></div>
+    </div>
+    <button class="btn btn-primary" onclick="showPage('records',document.querySelectorAll('.nav-tab')[2])">+ Upload Report</button>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-val" id="dM">0</div><div class="stat-label">Family Members</div></div>
+    <div class="stat-card"><div class="stat-val" id="dR">0</div><div class="stat-label">Reports Analysed</div></div>
+    <div class="stat-card"><div class="stat-val" id="dS" style="color:var(--green)">—</div><div class="stat-label">Health Score</div></div>
+    <div class="stat-card"><div class="stat-val" id="dF" style="color:var(--red)">0</div><div class="stat-label">Risk Flags</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">Recent Reports</div>
+      <div class="card-sub">Latest analysed records</div>
+      <div id="dashRec"><div style="color:var(--muted);font-size:.82rem">No reports yet.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Family Risk Overview</div>
+      <div class="card-sub">Hereditary conditions</div>
+      <div id="dashFam"><div style="color:var(--muted);font-size:.82rem">Add family members to see risk overview.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FAMILY TREE -->
+<div class="page" id="page-family">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <div style="font-family:'Instrument Serif',serif;font-size:1.3rem">Family Tree</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Map hereditary conditions across generations</div>
+    </div>
+    <button class="btn btn-primary" onclick="openMemberModal()">+ Add Member</button>
+  </div>
+  <div class="card">
+    <div id="genGrandRow"><div class="gen-label">Grandparents</div><div class="tree-generation" id="genGrand"></div></div>
+    <div style="text-align:center;color:var(--border);margin:4px 0;font-size:1.1rem">│</div>
+    <div><div class="gen-label">Parents</div><div class="tree-generation" id="genParents"></div></div>
+    <div style="text-align:center;color:var(--border);margin:4px 0;font-size:1.1rem">│</div>
+    <div><div class="gen-label">You &amp; Siblings</div><div class="tree-generation" id="genYou"></div></div>
+    <div style="text-align:center;color:var(--border);margin:4px 0;font-size:1.1rem">│</div>
+    <div><div class="gen-label">Children</div><div class="tree-generation" id="genChildren"></div></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)"><div style="width:8px;height:8px;border-radius:50%;background:var(--purple)"></div>Critical</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)"><div style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>Serious</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)"><div style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></div>Moderate</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)"><div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>Mild</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)"><div style="width:9px;height:9px;border:1.5px dashed var(--muted);border-radius:2px"></div>Deceased</div>
+    </div>
+  </div>
+</div>
+
+<!-- MEDICAL RECORDS -->
+<div class="page" id="page-records">
+  <div style="margin-bottom:18px">
+    <div style="font-family:'Instrument Serif',serif;font-size:1.3rem">Medical Records</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Upload PDF or image — AI reads and analyses automatically, no manual typing needed</div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px" id="uploadCard">
+    <div class="card-title">Upload Report</div>
+    <div class="card-sub">Blood test · Doctor summary · Scan / MRI · PDF or Image (JPG/PNG)</div>
+    <div class="dropzone" id="dropzone"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <div style="font-size:2rem;margin-bottom:8px">📤</div>
+      <div style="font-weight:600;margin-bottom:3px">Drop your report here or click to browse</div>
+      <div style="font-size:.76rem;color:var(--muted)">PDF · JPG · PNG · HEIC — Max 20MB</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,image/*" style="display:none" onchange="handleFileSelect(event)"/>
+    <div id="filePrev" style="display:none;margin-top:10px"></div>
+    <div id="uploadMeta" style="display:none;margin-top:14px">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Report Type *</label>
+          <select class="form-select" id="repType">
+            <option value="">Select type</option>
+            <option>Blood Test</option>
+            <option>Doctor Visit Summary</option>
+            <option>Scan / MRI / X-Ray</option>
+            <option>Prescription</option>
+            <option>Discharge Summary</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Report Date *</label>
+          <input class="form-input" id="repDate" type="date"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Lab / Hospital</label><input class="form-input" id="repLab" placeholder="e.g. Apollo Diagnostics"/></div>
+        <div class="form-group"><label class="form-label">Patient Name</label><input class="form-input" id="repPatient" placeholder="e.g. Self, Father..."/></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="analyseReport()">🤖 Analyse with AI</button>
+        <button class="btn btn-outline" onclick="cancelUpload()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="latestResult" style="margin-bottom:16px"></div>
+
+  <div id="recSection" style="display:none">
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:8px">All Reports</div>
+    <div id="recList"></div>
+  </div>
+  <div id="recEmpty" class="card" style="display:none">
+    <div class="empty-state"><div class="ei">📋</div><h3>No records yet</h3><p>Upload your first report above to get AI analysis.</p></div>
+  </div>
+</div>
+
+<!-- RISK REPORT -->
+<div class="page" id="page-report">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <div style="font-family:'Instrument Serif',serif;font-size:1.3rem">Risk Report</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:2px">AI-generated health intelligence from records + family history</div>
+    </div>
+    <button class="btn btn-outline" onclick="window.print()">🖨️ Export PDF</button>
+  </div>
+
+  <div id="reportEmpty" class="card">
+    <div class="empty-state">
+      <div class="ei">📊</div>
+      <h3>Risk report not available yet</h3>
+      <p>Upload at least one medical report and add family members to generate your personalised risk report.</p>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-primary" onclick="showPage('records',document.querySelectorAll('.nav-tab')[2])">📥 Upload Report</button>
+        <button class="btn btn-outline" onclick="openMemberModal()">+ Add Family Member</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="reportContent" style="display:none">
+
+    <div class="risk-hero">
+      <div class="score-ring">
+        <svg width="110" height="110" style="transform:rotate(-90deg)">
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--border)" stroke-width="9"/>
+          <circle id="scoreCircle" cx="55" cy="55" r="44" fill="none" stroke="var(--green)" stroke-width="9"
+            stroke-dasharray="276.5" stroke-dashoffset="276.5" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease"/>
+        </svg>
+        <div class="score-inner">
+          <div class="score-num" id="scoreNum">—</div>
+          <div class="score-lbl">Score</div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.3rem;margin-bottom:4px">Your Health Intelligence Report</div>
+        <div style="font-size:.8rem;color:var(--text2);margin-bottom:10px" id="reportMeta">—</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="reportBadges"></div>
+      </div>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">🤖 AI Health Summary</div>
+      <div class="card-sub">Personalised analysis from your records + family history</div>
+      <div id="aiSummary" style="font-size:.84rem;line-height:1.7;color:var(--text2);background:var(--surface2);border-radius:8px;padding:14px">Generating your health summary…</div>
+    </div>
+
+    <!-- Trends -->
+    <div class="card" id="trendCard" style="margin-bottom:16px;display:none">
+      <div class="card-title">📈 Value Trends Over Time</div>
+      <div class="card-sub">Key markers tracked across all your reports</div>
+      <div id="trendWrap"></div>
+    </div>
+
+    <!-- Comparison -->
+    <div class="card" id="compareCard" style="margin-bottom:16px;display:none">
+      <div class="card-title">🔍 Report Comparison</div>
+      <div class="card-sub">Your two most recent reports side by side</div>
+      <div class="compare-grid" id="compareGrid"></div>
+    </div>
+
+    <!-- 2-col -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">⚠️ Condition Risk Scores</div>
+        <div class="card-sub">Hereditary risk % by family history</div>
+        <div id="condRisk"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📄 Report History</div>
+        <div class="card-sub">All reports with status</div>
+        <div id="repHist"></div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="card">
+      <div class="card-title">✅ Recommendations</div>
+      <div class="card-sub">Actions based on your analysis</div>
+      <div id="allRecs"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD MEMBER MODAL -->
+<div class="modal-overlay" id="memberModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Family Member</div>
+      <button class="modal-close" onclick="closeMemberModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="mName" placeholder="e.g. Suresh Kumar"/></div>
+      <div class="form-group">
+        <label class="form-label">Relationship *</label>
+        <select class="form-select" id="mRel">
+          <option value="">Select</option>
+          <option>Father</option><option>Mother</option><option>Brother</option><option>Sister</option>
+          <option>Paternal Grandfather</option><option>Paternal Grandmother</option>
+          <option>Maternal Grandfather</option><option>Maternal Grandmother</option>
+          <option>Son</option><option>Daughter</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Age</label><input class="form-input" id="mAge" type="number" placeholder="55"/></div>
+      <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="mStatus"><option value="Alive">Alive</option><option value="Deceased">Deceased</option></select></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Known Conditions (type to search &amp; get severity)</label>
+      <div class="cond-wrap">
+        <input class="form-input" id="mCondInput" placeholder="e.g. Diabetes, Hypertension..." autocomplete="off"
+          oninput="acSearch(this,'mCondTags','mCondAC')" onkeydown="acKeydown(event,'mCondTags','mCondAC')"/>
+        <div class="ac-list" id="mCondAC" style="display:none"></div>
+      </div>
+      <div class="cond-tags" id="mCondTags"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="mNotes" placeholder="Any other relevant health notes..."></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="saveMember()">Add Member</button>
+      <button class="btn btn-outline" onclick="closeMemberModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">Share with Doctor</div>
+      <button class="modal-close" onclick="document.getElementById('shareModal').classList.remove('open')">✕</button>
+    </div>
+    <div id="shareCard"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+      <button class="btn btn-primary" style="justify-content:center" onclick="copyShare()">📋 Copy to Clipboard</button>
+      <button class="btn btn-outline" style="justify-content:center" onclick="window.print()">🖨️ Print / PDF</button>
+    </div>
+    <div style="background:var(--yellow-light);border:1px solid #f5d87a;border-radius:8px;padding:10px 12px;font-size:.73rem;color:#a07000;margin-top:12px;line-height:1.5">
+      ⚠️ Indicative only — not a medical diagnosis. Always consult a qualified healthcare professional.
+    </div>
+  </div>
+</div>
+
+<!-- PROCESSING OVERLAY -->
+<div class="proc-overlay" id="procOverlay">
+  <div class="proc-box">
+    <div class="proc-pulse">🔬</div>
+    <div style="font-family:'Instrument Serif',serif;font-size:1.1rem;margin-bottom:4px">Analysing your report…</div>
+    <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">Usually takes 10–20 seconds</div>
+    <div id="procSteps">
+      <div class="proc-step" id="ps1">⬜ Reading document content</div>
+      <div class="proc-step" id="ps2">⬜ Extracting medical values</div>
+      <div class="proc-step" id="ps3">⬜ Comparing with past reports</div>
+      <div class="proc-step" id="ps4">⬜ Calculating risk factors</div>
+      <div class="proc-step" id="ps5">⬜ Generating health summary</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══ CONDITIONS DATABASE ══
+const CONDS = [
+  {n:'Type 2 Diabetes',s:'serious',k:['diabet','sugar']},
+  {n:'Type 1 Diabetes',s:'critical',k:['type 1 diabet']},
+  {n:'Hypertension',s:'moderate',k:['hyper','blood pressure','bp']},
+  {n:'Hypotension',s:'moderate',k:['hypoten','low bp']},
+  {n:'Coronary Artery Disease',s:'critical',k:['coronary','cad','heart disease']},
+  {n:'Heart Attack',s:'critical',k:['heart attack','myocardial','mi ']},
+  {n:'Stroke',s:'critical',k:['stroke','cerebral']},
+  {n:'Breast Cancer',s:'critical',k:['breast cancer']},
+  {n:'Lung Cancer',s:'critical',k:['lung cancer']},
+  {n:'Colon Cancer',s:'critical',k:['colon','colorectal']},
+  {n:'Prostate Cancer',s:'critical',k:['prostate']},
+  {n:'Thyroid Disorder',s:'moderate',k:['thyroid','tsh']},
+  {n:'Hypothyroidism',s:'moderate',k:['hypothyroid']},
+  {n:'Hyperthyroidism',s:'moderate',k:['hyperthyroid']},
+  {n:'Asthma',s:'moderate',k:['asthma']},
+  {n:'COPD',s:'serious',k:['copd','chronic obstruct']},
+  {n:'Chronic Kidney Disease',s:'serious',k:['kidney','renal','ckd']},
+  {n:'Liver Disease',s:'serious',k:['liver','hepat','cirrhosis']},
+  {n:'Obesity',s:'moderate',k:['obes','overweight']},
+  {n:'Anaemia',s:'mild',k:['anaemia','anemia','hemoglobin']},
+  {n:'High Cholesterol',s:'moderate',k:['cholesterol','lipid','dyslipi']},
+  {n:'Arthritis',s:'mild',k:['arthritis','joint pain']},
+  {n:'Osteoporosis',s:'moderate',k:['osteoporos','bone density']},
+  {n:'Depression',s:'moderate',k:['depress']},
+  {n:'Anxiety',s:'mild',k:['anxiety','panic']},
+  {n:"Alzheimer's Disease",s:'critical',k:['alzheimer','dementia']},
+  {n:"Parkinson's Disease",s:'serious',k:['parkinson']},
+  {n:'Epilepsy',s:'serious',k:['epilepsy','seizure']},
+  {n:'PCOD / PCOS',s:'moderate',k:['pcod','pcos','polycystic']},
+  {n:'Migraine',s:'mild',k:['migraine']},
+  {n:'Gout',s:'mild',k:['gout','uric acid']},
+  {n:'Sickle Cell Anaemia',s:'critical',k:['sickle cell']},
+  {n:'Thalassemia',s:'serious',k:['thalassemia']},
+  {n:'Hepatitis B',s:'serious',k:['hepatitis b','hbsag']},
+  {n:'Hepatitis C',s:'serious',k:['hepatitis c']},
+  {n:'HIV / AIDS',s:'critical',k:['hiv','aids']},
+];
+
+const SEV = {
+  mild:    {bg:'#e6f7f3',c:'#007a55'},
+  moderate:{bg:'#fffff0',c:'#a07000'},
+  serious: {bg:'#fff5f5',c:'#c53030'},
+  critical:{bg:'#faf5ff',c:'#553c9a'}
+};
+
+const GEN_MAP = {
+  'Paternal Grandfather':'grand','Paternal Grandmother':'grand',
+  'Maternal Grandfather':'grand','Maternal Grandmother':'grand',
+  'Father':'parents','Mother':'parents',
+  'You':'you','Brother':'you','Sister':'you',
+  'Son':'children','Daughter':'children','Other':'you'
+};
+
+// ══ STATE ══
+let state = { profile:null, members:[], records:[], pendingFile:null, pendingType:null };
+
+// ══ PROFILE ══
+function saveProfile() {
+  const name = document.getElementById('pName').value.trim();
+  const age  = document.getElementById('pAge').value;
+  if (!name) { toast('⚠️ Please enter your name'); return; }
+  state.profile = { name, age,
+    gender: document.getElementById('pGender').value,
+    blood:  document.getElementById('pBlood').value,
+    conds:  getTags('pCondTags') };
+  // Hide setup, show app
+  document.getElementById('profileSetup').classList.add('hidden');
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('navAvatar').textContent = name[0].toUpperCase();
+  showPage('dashboard', document.querySelector('.nav-tab'));
+  renderMembers();
+}
+
+// ══ NAV ══
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id)?.classList.add('active');
+  if (el) el.classList.add('active');
+  if (id==='report') refreshReport();
+  if (id==='dashboard') refreshDash();
+}
+
+// ══ AUTOCOMPLETE ══
+function acSearch(input, tagsId, acId) {
+  const val = input.value.toLowerCase().trim();
+  const ac = document.getElementById(acId);
+  if (!val) { ac.style.display='none'; return; }
+  const existing = getTags(tagsId).map(t=>t.n.toLowerCase());
+  const hits = CONDS.filter(c => !existing.includes(c.n.toLowerCase()) &&
+    (c.n.toLowerCase().includes(val) || c.k.some(k=>k.includes(val)))).slice(0,7);
+  if (!hits.length) { ac.style.display='none'; return; }
+  ac.style.display='block';
+  const sv = SEV;
+  ac.innerHTML = hits.map(c=>{
+    const s=sv[c.s];
+    return `<div class="ac-item" onclick="addCond('${c.n}','${c.s}','${tagsId}','${acId}','${input.id}')">
+      <span>${c.n}</span><span class="sev-badge" style="background:${s.bg};color:${s.c}">${c.s}</span>
+    </div>`;
+  }).join('') + `<div class="ac-item" style="border-top:1px solid var(--border)" onclick="addCustom('${input.id}','${tagsId}','${acId}')">
+    <span style="color:var(--muted);font-size:.78rem">Add "${input.value}" (custom)</span>
+  </div>`;
+}
+
+function acKeydown(e, tagsId, acId) {
+  if (e.key==='Enter') {
+    const first = document.querySelector('#'+acId+' .ac-item');
+    if (first) first.click();
+    else if (e.target.value.trim()) addCustom(e.target.id, tagsId, acId);
+  }
+  if (e.key==='Escape') document.getElementById(acId).style.display='none';
+}
+
+function addCond(name, sev, tagsId, acId, inputId) {
+  document.getElementById(acId).style.display='none';
+  document.getElementById(inputId).value='';
+  appendTag(tagsId, name, sev);
+}
+
+function addCustom(inputId, tagsId, acId) {
+  const inp = document.getElementById(inputId);
+  if (!inp.value.trim()) return;
+  document.getElementById(acId).style.display='none';
+  appendTag(tagsId, inp.value.trim(), 'moderate');
+  inp.value='';
+}
+
+function appendTag(tagsId, name, sev) {
+  if (getTags(tagsId).find(t=>t.n.toLowerCase()===name.toLowerCase())) return;
+  const s = SEV[sev]||SEV.moderate;
+  const id = 'ct_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+  const wrap = document.getElementById(tagsId);
+  const tag = document.createElement('span');
+  tag.className='ctag'; tag.id=id; tag.dataset.n=name; tag.dataset.s=sev;
+  tag.style=`background:${s.bg};color:${s.c};border:1px solid ${s.c}30`;
+  tag.innerHTML=`<span style="width:6px;height:6px;border-radius:50%;background:${s.c};display:inline-block"></span>${name}<button onclick="document.getElementById('${id}').remove()">✕</button>`;
+  wrap.appendChild(tag);
+}
+
+function getTags(tagsId) {
+  return [...document.querySelectorAll('#'+tagsId+' .ctag')].map(t=>({n:t.dataset.n,s:t.dataset.s}));
+}
+
+// ══ FAMILY TREE ══
+function renderMembers() {
+  const gens = {grand:[],parents:[],you:[],children:[]};
+  gens.you.push({name:state.profile?.name||'You',relation:'You',conds:state.profile?.conds||[],status:'Alive',isYou:true});
+  state.members.forEach(m=>{
+    const g = GEN_MAP[m.relation]||'you';
+    gens[g].push(m);
+  });
+  ['grand','parents','you','children'].forEach(g=>{
+    const elMap={grand:'genGrand',parents:'genParents',you:'genYou',children:'genChildren'};
+    const el=document.getElementById(elMap[g]);
+    if(!el)return;
+    el.innerHTML=gens[g].map(m=>memberCardHTML(m)).join('')+
+      `<button class="add-btn" onclick="openMemberModal()"><span style="font-size:1.1rem">+</span><span>Add</span></button>`;
+  });
+}
+
+function memberCardHTML(m) {
+  const conds = m.conds||m.conditions||[];
+  const dots = conds.map(c=>{
+    const sv=c.s||c.severity||'mild';
+    const col=sv==='critical'?'var(--purple)':sv==='serious'?'var(--red)':sv==='moderate'?'var(--yellow)':'var(--green)';
+    return `<div class="cdot" style="background:${col}" title="${c.n||c.name} (${sv})"></div>`;
+  }).join('');
+  const dec=m.status==='Deceased';
+  return `<div class="member-card ${m.isYou?'is-you':''} ${dec?'deceased':''}" title="${m.name}">
+    ${!m.isYou?`<button class="member-del" onclick="event.stopPropagation();deleteMember(${m.id})">✕</button>`:''}
+    <div class="member-name">${m.name}</div>
+    <div class="member-rel">${m.relation}${dec?' · Deceased':''}</div>
+    <div class="cdots">${dots}</div>
+  </div>`;
+}
+
+function openMemberModal() {
+  ['mName','mAge','mNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mRel').value='';
+  document.getElementById('mStatus').value='Alive';
+  document.getElementById('mCondTags').innerHTML='';
+  document.getElementById('memberModal').classList.add('open');
+}
+function closeMemberModal(){document.getElementById('memberModal').classList.remove('open')}
+
+function saveMember(){
+  const name=document.getElementById('mName').value.trim();
+  const rel=document.getElementById('mRel').value;
+  if(!name||!rel){toast('⚠️ Name and relationship required');return;}
+  state.members.push({id:Date.now(),name,relation:rel,age:document.getElementById('mAge').value,
+    status:document.getElementById('mStatus').value,conds:getTags('mCondTags'),notes:document.getElementById('mNotes').value});
+  closeMemberModal();
+  renderMembers();
+  toast('✅ Family member added');
+}
+
+function deleteMember(id){
+  if(!confirm('Remove this family member?'))return;
+  state.members=state.members.filter(m=>m.id!==id);
+  renderMembers();
+}
+
+// ══ FILE UPLOAD ══
+function handleFileSelect(e){if(e.target.files[0])processFile(e.target.files[0])}
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);
+}
+
+function processFile(file){
+  state.pendingFile=file;
+  state.pendingType=file.name.toLowerCase().endsWith('.pdf')?'pdf':'image';
+  document.getElementById('filePrev').style.display='block';
+  document.getElementById('filePrev').innerHTML=`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.3rem">${state.pendingType==='pdf'?'📄':'🖼️'}</span>
+      <span style="flex:1;font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${file.name}</span>
+      <span style="font-size:.73rem;color:var(--muted)">${(file.size/1024/1024).toFixed(2)} MB</span>
+      <button class="btn btn-sm btn-danger" onclick="cancelUpload()">Remove</button>
+    </div>`;
+  document.getElementById('uploadMeta').style.display='block';
+  document.getElementById('repDate').value=new Date().toISOString().split('T')[0];
+}
+
+function cancelUpload(){
+  state.pendingFile=null;
+  document.getElementById('filePrev').style.display='none';
+  document.getElementById('uploadMeta').style.display='none';
+  document.getElementById('fileInput').value='';
+}
+
+// ══ AI ANALYSIS ══
+async function analyseReport(){
+  if(!state.pendingFile){toast('⚠️ Please upload a file');return;}
+  const type=document.getElementById('repType').value;
+  const date=document.getElementById('repDate').value;
+  if(!type||!date){toast('⚠️ Select report type and date');return;}
+
+  setProc(true);setProcStep(1);
+
+  try{
+    setProcStep(2);
+
+    const pastSame=state.records.filter(r=>r.type===type);
+    const pastCtx=pastSame.length>0
+      ? '\nPAST '+type.toUpperCase()+' REPORTS:\n'+pastSame.map(r=>
+          `Date:${r.date} Values:${JSON.stringify(r.analysis?.extractedValues||[])} Status:${r.analysis?.overallStatus}`).join('\n---\n')
+      :'No past reports of this type.';
+    const famCtx=state.members.length>0
+      ?state.members.map(m=>`${m.relation}:${(m.conds||[]).map(c=>c.n).join(',')}`).join('; ')
+      :'None added.';
+
+    setProcStep(3);
+
+    // Always render as image(s) for vision — works for scanned PDFs, photos, digital PDFs
+    const imageBlocks = await fileToImageBlocks(state.pendingFile);
+
+    setProcStep(4);
+
+    const prompt=`You are a medical report analyser AI inside Family Health Vault.
+Report Type: ${type}
+Report Date: ${date}
+Patient Family History: ${famCtx}
+${pastCtx}
+
+Carefully read ALL text, numbers, and values visible in the medical report image(s).
+This may be a scanned document — read every parameter, value and unit you can see visually.
+
+Return ONLY valid JSON (no markdown, no explanation, no preamble):
+{
+  "summary":"2-3 sentence clinical summary of what this report shows",
+  "overallStatus":"Normal|Borderline|Concerning",
+  "extractedValues":[{"name":"Parameter Name","value":"value with unit","numVal":123,"status":"Normal|High|Low|Borderline","normalRange":"reference range if visible"}],
+  "trendInsight":"Compare to past reports if any, else say: First report of this type",
+  "riskFlags":["specific risk 1","specific risk 2"],
+  "recommendations":["recommendation 1","recommendation 2","recommendation 3"]
+}`;
+
+    const msgContent = [...imageBlocks, {type:'text', text:prompt}];
+
+    const resp = await fetch('/api/analyse',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        messages:[{role:'user', content:msgContent}]
+      })
+    });
+
+    if(!resp.ok){
+      const errBody=await resp.json().catch(()=>({}));
+      throw new Error(`API ${resp.status}: ${errBody?.error?.message||'unknown'}`);
+    }
+
+    const data=await resp.json();
+    setProcStep(5);
+
+    if(data.error) throw new Error(data.error.message||'API error');
+
+    let txt=(data.content||[]).map(c=>c.type==='text'?c.text:'').join('').trim();
+    txt=txt.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+    const jsonMatch=txt.match(/\{[\s\S]*\}/);
+    if(jsonMatch) txt=jsonMatch[0];
+
+    let analysis;
+    try{analysis=JSON.parse(txt);}
+    catch(e){
+      analysis={summary:txt||'Report processed.',overallStatus:'Unknown',extractedValues:[],trendInsight:'',riskFlags:[],recommendations:[]};
+    }
+
+    const rec={id:Date.now(),type,date,lab:document.getElementById('repLab').value,
+      patient:document.getElementById('repPatient').value,fileName:state.pendingFile.name,analysis};
+    state.records.unshift(rec);
+
+    setProc(false);
+    cancelUpload();
+    renderRecords();
+    renderResult(rec);
+    toast('✅ Report analysed successfully');
+
+  }catch(err){
+    setProc(false);
+    console.error('Analysis error:',err);
+    const msg=err.message||'';
+    if(msg.toLowerCase().includes('failed to fetch')||msg.toLowerCase().includes('networkerror'))
+      toast('❌ Network error — open this file via claude.ai or a local server');
+    else if(msg.includes('413')||msg.includes('too large'))
+      toast('❌ File too large — use a smaller image');
+    else
+      toast('❌ Analysis failed: '+msg.slice(0,80));
+  }
+}
+
+function setProc(show){document.getElementById('procOverlay').classList.toggle('show',show);}
+function setProcStep(n){
+  const lbl=['Reading document content','Extracting medical values','Comparing with past reports','Calculating risk factors','Generating health summary'];
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById('ps'+i);
+    if(i<n){el.textContent='✅ '+lbl[i-1];el.className='proc-step done';}
+    else if(i===n){el.textContent='⏳ '+lbl[i-1];el.className='proc-step active';}
+    else{el.textContent='⬜ '+lbl[i-1];el.className='proc-step';}
+  }
+}
+
+function toBase64(file){
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej();r.readAsDataURL(file);});
+}
+
+// Convert any file (PDF or image) into vision-ready image blocks
+async function fileToImageBlocks(file){
+  const isPDF = file.type==='application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+  if(!isPDF){
+    // Direct image — just send as-is
+    const b64 = await toBase64(file);
+    const mType = file.type||'image/jpeg';
+    return [{type:'image', source:{type:'base64', media_type:mType, data:b64}}];
+  }
+
+  // PDF — render each page to canvas, send as images
+  try{
+    if(!window.pdfjsLib){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload=()=>{
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          res();
+        };
+        s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    const maxPages = Math.min(pdf.numPages, 4); // max 4 pages to stay within token limits
+    const blocks = [];
+
+    for(let i=1; i<=maxPages; i++){
+      const page = await pdf.getPage(i);
+      const scale = 2.0; // high-res for better OCR
+      const viewport = page.getViewport({scale});
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({canvasContext:ctx, viewport}).promise;
+      // Convert canvas to base64 JPEG
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const b64 = dataUrl.split(',')[1];
+      blocks.push({type:'image', source:{type:'base64', media_type:'image/jpeg', data:b64}});
+    }
+
+    return blocks;
+
+  }catch(e){
+    console.error('PDF render failed:', e);
+    throw new Error('Could not render PDF pages — try uploading as JPG/PNG image instead');
+  }
+}
+
+// ══ RENDER RESULT ══
+function renderResult(r){
+  const a=r.analysis;
+  const scls=a.overallStatus==='Normal'?'tl-normal':a.overallStatus==='Concerning'?'tl-concerning':'tl-borderline';
+  const vcol={Normal:'var(--green)',High:'var(--red)',Low:'var(--blue)',Borderline:'var(--yellow)'};
+  const html=`<div class="analysis-result">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-family:'Instrument Serif',serif;font-size:1.05rem;flex:1">${r.type} · ${r.date}</div>
+      <span class="traffic-badge ${scls}">● ${a.overallStatus||'Unknown'}</span>
+    </div>
+    <div style="font-size:.83rem;color:var(--text2);line-height:1.65;margin-bottom:12px">${a.summary||''}</div>
+    ${a.extractedValues?.length?`
+      <div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin-bottom:7px">Extracted Values</div>
+      <div class="vals-grid">${a.extractedValues.map(v=>`
+        <div class="val-chip" style="border-left:3px solid ${vcol[v.status]||'var(--border)'}">
+          <div class="val-name">${v.name}</div>
+          <div class="val-value">${v.value}</div>
+          <div class="val-status" style="color:${vcol[v.status]||'var(--muted)'}">${v.status}${v.normalRange?' · '+v.normalRange:''}</div>
+        </div>`).join('')}</div>`:''}
+    ${a.trendInsight?`<div style="background:var(--blue-light);border-radius:7px;padding:9px 12px;font-size:.8rem;color:var(--blue);margin-top:10px">📊 ${a.trendInsight}</div>`:''}
+    ${a.riskFlags?.length?`<div style="margin-top:10px"><div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin-bottom:5px">Risk Flags</div>${a.riskFlags.map(f=>`<div style="font-size:.8rem;padding:3px 0;display:flex;gap:6px;align-items:center"><span style="color:var(--red)">⚠️</span>${f}</div>`).join('')}</div>`:''}
+    ${a.recommendations?.length?`<div style="margin-top:10px"><div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin-bottom:5px">Recommendations</div>${a.recommendations.map(rc=>`<div style="font-size:.8rem;padding:3px 0;display:flex;gap:6px;align-items:center"><span style="color:var(--green)">✓</span>${rc}</div>`).join('')}</div>`:''}
+    <div style="font-size:.68rem;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">⚕️ Indicative only — not a medical diagnosis. Consult your doctor.</div>
+  </div>`;
+  const lr=document.getElementById('latestResult');
+  lr.innerHTML=`<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:7px">Latest Analysis</div>`+html;
+}
+
+// ══ RECORDS LIST ══
+function renderRecords(){
+  const sec=document.getElementById('recSection');
+  const emp=document.getElementById('recEmpty');
+  if(!state.records.length){sec.style.display='none';emp.style.display='block';return;}
+  sec.style.display='block';emp.style.display='none';
+  const sc=s=>s==='Normal'?'tl-normal':s==='Concerning'?'tl-concerning':'tl-borderline';
+  const vcol={Normal:'var(--green)',High:'var(--red)',Low:'var(--blue)',Borderline:'var(--yellow)'};
+  document.getElementById('recList').innerHTML=state.records.map(r=>`
+    <div class="rec-item" id="ri${r.id}" onclick="toggleRec(${r.id})">
+      <div class="rec-top">
+        <span style="background:var(--blue-light);color:var(--blue);font-size:.67rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;white-space:nowrap">${r.type}</span>
+        <span style="font-weight:600;font-size:.84rem;flex:1">${r.patient?r.patient+' · ':''}</span>
+        <span style="font-size:.73rem;color:var(--muted)">${r.date}</span>
+        <span class="traffic-badge ${sc(r.analysis?.overallStatus)} btn-sm" style="font-size:.67rem;padding:3px 9px">${r.analysis?.overallStatus||'—'}</span>
+        <button class="btn btn-sm btn-danger" style="padding:3px 7px" onclick="event.stopPropagation();delRec(${r.id})">✕</button>
+      </div>
+      <div class="rec-expand">
+        <div style="font-size:.82rem;color:var(--text2);margin-bottom:7px">${r.analysis?.summary||''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${(r.analysis?.extractedValues||[]).map(v=>`<span style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:.7rem"><strong>${v.name}:</strong> ${v.value} <span style="color:${vcol[v.status]||'var(--muted)'}">(${v.status})</span></span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleRec(id){document.getElementById('ri'+id)?.classList.toggle('open');}
+function delRec(id){
+  if(!confirm('Delete this record?'))return;
+  state.records=state.records.filter(r=>r.id!==id);
+  renderRecords();
+  if(!state.records.length)document.getElementById('latestResult').innerHTML='';
+}
+
+// ══ RISK REPORT ══
+async function refreshReport(){
+  const has=state.records.length>0||state.members.length>0;
+  document.getElementById('reportEmpty').style.display=has?'none':'block';
+  document.getElementById('reportContent').style.display=has?'block':'none';
+  if(!has)return;
+
+  // Score
+  let score=78;
+  state.records.forEach(r=>{
+    const s=r.analysis?.overallStatus;
+    if(s==='Concerning')score-=12;
+    else if(s==='Borderline')score-=5;
+    else if(s==='Normal')score+=2;
+  });
+  score-=state.members.filter(m=>(m.conds||[]).length>0).length*2;
+  score=Math.max(28,Math.min(99,score));
+
+  const circ=276.5;
+  const col=score>=80?'var(--green)':score>=60?'var(--yellow)':'var(--red)';
+  document.getElementById('scoreCircle').style.strokeDashoffset=circ-(score/100)*circ;
+  document.getElementById('scoreCircle').style.stroke=col;
+  document.getElementById('scoreNum').textContent=score;
+  document.getElementById('scoreNum').style.color=col;
+
+  const flags=state.records.reduce((a,r)=>a+(r.analysis?.riskFlags?.length||0),0);
+  document.getElementById('reportMeta').textContent=
+    `${state.members.length} member(s) · ${state.records.length} report(s) · ${flags} flag(s)`;
+
+  const bgs=[];
+  if(score>=80)bgs.push({t:'✅ Good Health',bg:'var(--green-light)',c:'var(--green)'});
+  else if(score>=60)bgs.push({t:'⚠️ Monitor Closely',bg:'var(--yellow-light)',c:'var(--yellow)'});
+  else bgs.push({t:'🚨 Needs Attention',bg:'var(--red-light)',c:'var(--red)'});
+  if(state.records.some(r=>r.analysis?.overallStatus==='Concerning'))
+    bgs.push({t:'Concerning Values',bg:'var(--red-light)',c:'var(--red)'});
+  document.getElementById('reportBadges').innerHTML=bgs.map(b=>
+    `<span style="background:${b.bg};color:${b.c};padding:3px 11px;border-radius:20px;font-size:.72rem;font-weight:600">${b.t}</span>`).join('');
+
+  buildTrends();
+  buildCompare();
+  buildCondRisk();
+  buildRepHist();
+  buildAllRecs();
+  buildAISummary(score);
+}
+
+function buildTrends(){
+  const vmap={};
+  const sorted=state.records.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  sorted.forEach(r=>(r.analysis?.extractedValues||[]).forEach(v=>{
+    const n=parseFloat(v.numVal||v.value);
+    if(!isNaN(n)){if(!vmap[v.name])vmap[v.name]=[];vmap[v.name].push({d:r.date,v:n,raw:v.value,s:v.status});}
+  }));
+  const items=Object.entries(vmap).filter(([,v])=>v.length>=1);
+  const tc=document.getElementById('trendCard');
+  if(!items.length){tc.style.display='none';return;}
+  tc.style.display='block';
+  document.getElementById('trendWrap').innerHTML=items.map(([name,vals])=>{
+    const cid='tc_'+name.replace(/[^a-zA-Z0-9]/g,'_');
+    let arrow='';
+    if(vals.length>=2){const diff=vals[vals.length-1].v-vals[0].v;const pct=Math.abs(diff/vals[0].v*100).toFixed(1);arrow=`<span style="color:${diff>0?'var(--red)':'var(--green)'};font-weight:700">${diff>0?'↑':'↓'}${pct}%</span>`;}
+    return `<div class="trend-item">
+      <div style="font-size:.73rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;display:flex;justify-content:space-between">${name} ${arrow}</div>
+      <canvas id="${cid}" style="width:100%;height:72px"></canvas>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">${vals.map(v=>`<span style="font-size:.69rem;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 7px">${v.d}: <strong>${v.raw}</strong></span>`).join('')}</div>
+    </div>`;
+  }).join('');
+  setTimeout(()=>items.forEach(([name,vals])=>drawChart('tc_'+name.replace(/[^a-zA-Z0-9]/g,'_'),vals)),60);
+}
+
+function drawChart(id,vals){
+  const canvas=document.getElementById(id);
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.parentElement.offsetWidth;
+  canvas.width=w*dpr;canvas.height=72*dpr;
+  canvas.style.width=w+'px';canvas.style.height='72px';
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  const p={t:6,b:18,l:34,r:10};
+  const cw=w-p.l-p.r,ch=72-p.t-p.b;
+  const vs=vals.map(v=>v.v);
+  const mn=Math.min(...vs)*.93,mx=Math.max(...vs)*1.07;
+  const pts=vals.map((v,i)=>({x:p.l+(vals.length===1?cw/2:i*cw/(vals.length-1)),y:p.t+ch-((v.v-mn)/(mx-mn+.001))*ch}));
+  ctx.strokeStyle='#e2e8f0';ctx.lineWidth=1;
+  [0,.5,1].forEach(t=>{const y=p.t+ch*(1-t);ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillStyle='#8fa3b8';ctx.font='9px Geist,sans-serif';ctx.textAlign='right';ctx.fillText((mn+(mx-mn)*t).toFixed(1),p.l-3,y+3);});
+  const g=ctx.createLinearGradient(0,p.t,0,72-p.b);g.addColorStop(0,'rgba(0,168,120,.2)');g.addColorStop(1,'rgba(0,168,120,0)');
+  ctx.beginPath();ctx.moveTo(pts[0].x,72-p.b);pts.forEach(pt=>ctx.lineTo(pt.x,pt.y));ctx.lineTo(pts[pts.length-1].x,72-p.b);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();pts.forEach((pt,i)=>i===0?ctx.moveTo(pt.x,pt.y):ctx.lineTo(pt.x,pt.y));ctx.strokeStyle='#00a878';ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor='rgba(0,168,120,.3)';ctx.shadowBlur=5;ctx.stroke();ctx.shadowBlur=0;
+  pts.forEach((pt,i)=>{const c=vals[i].s==='Normal'?'#00a878':vals[i].s==='High'||vals[i].s==='Low'?'#e53e3e':'#d69e2e';ctx.beginPath();ctx.arc(pt.x,pt.y,3.5,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle=c;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#8fa3b8';ctx.font='8px Geist,sans-serif';ctx.textAlign='center';ctx.fillText(vals[i].d.slice(5),pt.x,72-p.b+12);});
+}
+
+function buildCompare(){
+  const cc=document.getElementById('compareCard');
+  if(state.records.length<2){cc.style.display='none';return;}
+  cc.style.display='block';
+  const sorted=state.records.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const [l,p]=[sorted[0],sorted[1]];
+  const lv={},pv={};
+  (l.analysis?.extractedValues||[]).forEach(v=>lv[v.name]=v);
+  (p.analysis?.extractedValues||[]).forEach(v=>pv[v.name]=v);
+  const keys=[...new Set([...Object.keys(lv),...Object.keys(pv)])];
+  const sc=s=>s==='Normal'?'tl-normal':s==='Concerning'?'tl-concerning':'tl-borderline';
+  document.getElementById('compareGrid').innerHTML=`
+    <div>
+      <div class="cmp-header">${p.type} · ${p.date}</div>
+      <div style="margin-bottom:8px"><span class="traffic-badge ${sc(p.analysis?.overallStatus)}" style="font-size:.67rem;padding:3px 9px">${p.analysis?.overallStatus||'—'}</span></div>
+      ${keys.map(k=>`<div class="cmp-row"><span>${k}</span><span style="font-weight:600">${pv[k]?pv[k].value:'—'}</span></div>`).join('')}
+    </div>
+    <div>
+      <div class="cmp-header">${l.type} · ${l.date} <span style="color:var(--green);font-size:.63rem;font-weight:700">LATEST</span></div>
+      <div style="margin-bottom:8px"><span class="traffic-badge ${sc(l.analysis?.overallStatus)}" style="font-size:.67rem;padding:3px 9px">${l.analysis?.overallStatus||'—'}</span></div>
+      ${keys.map(k=>{
+        const lval=lv[k],pval=pv[k];
+        let d='';
+        if(lval&&pval){const ln=parseFloat(lval.numVal||lval.value),pn=parseFloat(pval.numVal||pval.value);if(!isNaN(ln)&&!isNaN(pn)&&pn){const pct=((ln-pn)/pn*100).toFixed(1);d=`<span class="${ln>pn?'delta-up':'delta-dn'}">${ln>pn?'↑':'↓'}${Math.abs(pct)}%</span>`;}}
+        return `<div class="cmp-row"><span>${k}</span><span style="display:flex;align-items:center;gap:4px;font-weight:600">${lval?lval.value:'—'} ${d}</span></div>`;
+      }).join('')}
+    </div>`;
+}
+
+function buildCondRisk(){
+  const map={};
+  state.members.forEach(m=>(m.conds||[]).forEach(c=>{
+    if(!map[c.n])map[c.n]={s:c.s,cnt:0,rels:[]};
+    map[c.n].cnt++;map[c.n].rels.push(m.relation);
+  }));
+  (state.profile?.conds||[]).forEach(c=>{
+    if(!map[c.n])map[c.n]={s:c.s,cnt:0,rels:[]};
+    map[c.n].cnt++;map[c.n].rels.push('You');
+  });
+  const div=document.getElementById('condRisk');
+  if(!Object.keys(map).length){div.innerHTML='<p style="font-size:.82rem;color:var(--muted);padding:8px 0">Add family members with conditions to see risk scores.</p>';return;}
+  const br={mild:15,moderate:35,serious:60,critical:85};
+  div.innerHTML=Object.entries(map).map(([name,d])=>{
+    const risk=Math.min(95,(br[d.s]||25)+(d.cnt-1)*10);
+    const col=risk>=70?'var(--red)':risk>=40?'var(--yellow)':'var(--green)';
+    return `<div class="risk-row">
+      <div style="flex:1">
+        <div style="font-weight:500">${name}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${d.rels.join(', ')}</div>
+        <div class="risk-bar-bg"><div class="risk-bar" style="width:${risk}%;background:${col}"></div></div>
+      </div>
+      <div style="text-align:right;min-width:48px;margin-left:10px">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.1rem;font-weight:700;color:${col}">${risk}%</div>
+        <div style="font-size:.65rem;color:var(--muted)">${d.s}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildRepHist(){
+  const div=document.getElementById('repHist');
+  const sc=s=>s==='Normal'?'var(--green)':s==='Concerning'?'var(--red)':'var(--yellow)';
+  div.innerHTML=!state.records.length?'<p style="font-size:.82rem;color:var(--muted)">No reports yet.</p>':
+    state.records.map(r=>`<div class="risk-row">
+      <div style="width:8px;height:8px;border-radius:50%;background:${sc(r.analysis?.overallStatus)};flex-shrink:0;margin-top:3px"></div>
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:.82rem">${r.type}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${r.date}${r.lab?' · '+r.lab:''}</div>
+      </div>
+      <span style="font-size:.75rem;font-weight:700;color:${sc(r.analysis?.overallStatus)}">${r.analysis?.overallStatus||'—'}</span>
+    </div>`).join('');
+}
+
+function buildAllRecs(){
+  const recs=[];
+  state.records.forEach(r=>(r.analysis?.recommendations||[]).forEach(rc=>{if(!recs.includes(rc))recs.push(rc);}));
+  const div=document.getElementById('allRecs');
+  div.innerHTML=!recs.length?'<p style="font-size:.82rem;color:var(--muted)">Recommendations appear after report analysis.</p>':
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${recs.map(r=>`
+      <div style="background:var(--green-light);border-radius:7px;padding:9px 12px;font-size:.8rem;display:flex;gap:6px;align-items:flex-start">
+        <span style="color:var(--green);flex-shrink:0">✓</span><span>${r}</span>
+      </div>`).join('')}</div>`;
+}
+
+async function buildAISummary(score){
+  const div=document.getElementById('aiSummary');
+  div.innerHTML='<span style="color:var(--muted)">Generating personalised summary…</span>';
+  const rTxt=state.records.slice(0,3).map(r=>`${r.type}(${r.date}):${r.analysis?.overallStatus} — ${r.analysis?.summary||''} Flags:${(r.analysis?.riskFlags||[]).join(',')}`).join('\n');
+  const fTxt=state.members.map(m=>`${m.relation}:${(m.conds||[]).map(c=>c.n+'('+c.s+')').join(',')||'none'}`).join('; ');
+  try{
+    const res=await fetch('/api/analyse',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,
+        system:'You are VITA, a health intelligence AI. Write a warm, clear 3–4 sentence health summary. Mention specific values/patterns. End with 2 actionable recommendations. Note findings are indicative only.',
+        messages:[{role:'user',content:`Patient:${state.profile?.name}, Age:${state.profile?.age}, Blood:${state.profile?.blood||'—'}\nScore:${score}/100\nReports:\n${rTxt||'None'}\nFamily:${fTxt||'None'}`}]})
+    });
+    const d=await res.json();
+    div.textContent=d.content?.[0]?.text||'Unable to generate summary.';
+    div.style.color='var(--text2)';
+  }catch(e){div.textContent='Upload more reports to generate your AI health summary.';}
+}
+
+// ══ DASHBOARD ══
+function refreshDash(){
+  const p=state.profile;
+  const h=new Date().getHours();
+  document.getElementById('dashGreeting').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+(p?.name?.split(' ')[0]||'');
+  document.getElementById('dashDate').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('dM').textContent=state.members.length;
+  document.getElementById('dR').textContent=state.records.length;
+  const flags=state.records.reduce((a,r)=>a+(r.analysis?.riskFlags?.length||0),0);
+  document.getElementById('dF').textContent=flags;
+  const concerning=state.records.filter(r=>r.analysis?.overallStatus==='Concerning').length;
+  const sc=Math.max(28,Math.min(99,78-concerning*12));
+  document.getElementById('dS').textContent=state.records.length?sc:'—';
+
+  const sc2=s=>s==='Normal'?'var(--green)':s==='Concerning'?'var(--red)':'var(--yellow)';
+  document.getElementById('dashRec').innerHTML=!state.records.length?'<div style="color:var(--muted);font-size:.82rem">No reports yet.</div>':
+    state.records.slice(0,3).map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="width:8px;height:8px;border-radius:50%;background:${sc2(r.analysis?.overallStatus)};flex-shrink:0"></div>
+      <div style="flex:1"><div style="font-size:.82rem;font-weight:500">${r.type}</div><div style="font-size:.7rem;color:var(--muted)">${r.date}${r.lab?' · '+r.lab:''}</div></div>
+      <span style="font-size:.72rem;font-weight:700;color:${sc2(r.analysis?.overallStatus)}">${r.analysis?.overallStatus||'—'}</span>
+    </div>`).join('');
+
+  const cmap={};
+  state.members.forEach(m=>(m.conds||[]).forEach(c=>{cmap[c.n]=(cmap[c.n]||0)+1;}));
+  document.getElementById('dashFam').innerHTML=!Object.keys(cmap).length?'<div style="color:var(--muted);font-size:.82rem">Add family members with conditions to see risk overview.</div>':
+    Object.entries(cmap).slice(0,5).map(([n,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem"><span>${n}</span><span style="font-size:.7rem;color:var(--muted)">${cnt} member${cnt>1?'s':''}</span></div>`).join('');
+}
+
+// ══ SHARE ══
+function openShareModal(){
+  if(!state.profile){toast('⚠️ Set up your profile first');return;}
+  const sc=document.getElementById('scoreNum')?.textContent||'—';
+  const cmap={};
+  state.members.forEach(m=>(m.conds||[]).forEach(c=>{if(!cmap[c.n])cmap[c.n]=c.s;}));
+  const lr=state.records[0];const p=state.profile;
+  document.getElementById('shareCard').innerHTML=`
+    <div style="background:linear-gradient(135deg,#f0fdf8,#e8f4fd);border:1px solid #c6f6e9;border-radius:10px;padding:18px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.82rem">
+        <div><div style="font-size:.67rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Patient</div><div style="font-weight:600">${p.name}</div></div>
+        <div><div style="font-size:.67rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Age / Gender</div><div style="font-weight:600">${p.age||'—'} / ${p.gender||'—'}</div></div>
+        <div><div style="font-size:.67rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Blood Group</div><div style="font-weight:600">${p.blood||'—'}</div></div>
+        <div><div style="font-size:.67rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Health Score</div><div style="font-weight:600">${sc}/100</div></div>
+        <div style="grid-column:1/-1"><div style="font-size:.67rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Family Conditions</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${Object.entries(cmap).map(([n,sv])=>{const s=SEV[sv];return`<span style="background:${s.bg};color:${s.c};border:1px solid ${s.c}30;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600">${n}</span>`;}).join('')||'<span style="color:var(--muted);font-size:.78rem">None added</span>'}</div>
+        </div>
+        <div style="grid-column:1/-1"><div style="font-size:.67rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Latest Report</div>
+          <div style="font-weight:500">${lr?`${lr.type} · ${lr.date} · ${lr.analysis?.overallStatus||'—'}`:'None uploaded'}</div>
+        </div>
+      </div>
+      <div style="font-size:.65rem;color:var(--muted);border-top:1px solid #c6f6e9;padding-top:8px;margin-top:10px">Family Health Vault · ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>`;
+  document.getElementById('shareModal').classList.add('open');
+}
+
+function copyShare(){
+  const p=state.profile;
+  const sc=document.getElementById('scoreNum')?.textContent||'—';
+  const txt=`FAMILY HEALTH VAULT — PATIENT SUMMARY\nGenerated: ${new Date().toLocaleDateString()}\n\nPatient: ${p.name} | Age: ${p.age||'—'} | Gender: ${p.gender||'—'} | Blood: ${p.blood||'—'}\nHealth Score: ${sc}/100\n\nFamily History:\n${state.members.map(m=>`  ${m.relation} (${m.name}): ${(m.conds||[]).map(c=>c.n+' ['+c.s+']').join(', ')||'none'}`).join('\n')||'  None'}\n\nReports:\n${state.records.map(r=>`  ${r.type} (${r.date}): ${r.analysis?.overallStatus||'—'} — ${(r.analysis?.summary||'').slice(0,120)}`).join('\n')||'  None'}\n\nAI Summary: ${document.getElementById('aiSummary')?.textContent?.trim()||'Not generated'}\n\n---\nIndicative only. Not a medical diagnosis.\nFamily Health Vault — Hereditary Health Intelligence`;
+  navigator.clipboard.writeText(txt).then(()=>{toast('✅ Copied to clipboard');document.getElementById('shareModal').classList.remove('open');}).catch(()=>toast('❌ Copy failed'));
+}
+
+// ══ TOAST ══
+function toast(msg,dur=2600){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(16px)';},dur);
+}
+
+// ══ CLOSE MODALS ON BG CLICK ══
+['memberModal','shareModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+});
+
+// Close autocomplete on outside click
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.ac-list').forEach(ac=>{
+    if(!ac.parentElement.contains(e.target))ac.style.display='none';
+  });
+});
+</script>
+</div><!-- /appShell -->
+</body>
+</html>
